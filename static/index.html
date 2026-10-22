@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Song Analyzer</title>
+<style>
+:root{color-scheme:dark;--bg:#08111f;--panel:#101d30;--border:#263a56;--muted:#9bb0cf;--text:#f2f6ff;--blue:#3478f6;--teal:#23c49a;--purple:#a78bfa}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#142541 0,#08111f 58%);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+header{height:72px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100% - 1320px)/2));gap:20px}
+.brand{font-size:21px;font-weight:750;letter-spacing:-.4px}.brand span{color:#8a7cff}.hint{color:var(--muted);font-size:13px}
+main{max-width:1320px;margin:28px auto;padding:0 24px;display:grid;grid-template-columns:minmax(280px,.75fr) minmax(0,1.25fr);gap:22px}
+.panel{background:linear-gradient(150deg,rgba(18,32,52,.96),rgba(12,24,41,.96));border:1px solid var(--border);border-radius:14px;padding:22px;min-width:0}
+.drop{min-height:340px;border:1px dashed #49658a;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:.15s}
+.drop.drag{background:#142c4d;border-color:#6b9cff}.cloud{font-size:43px;color:#85a5e8}.drop h2{font-size:20px;margin:8px 0}.drop p{color:var(--muted);margin:4px 0 20px}
+button,.filebutton{border:0;background:var(--blue);color:white;border-radius:8px;padding:12px 20px;font-weight:650;cursor:pointer;font-size:14px}button:disabled{opacity:.55;cursor:wait}
+.small{font-size:12px;color:#8198bd;margin-top:18px}.status{margin-top:16px;color:var(--muted);overflow-wrap:anywhere}.right{display:flex;flex-direction:column;gap:18px}
+.filehead{display:flex;gap:12px;align-items:center;margin-bottom:18px}.musicicon{height:54px;width:54px;border-radius:12px;background:linear-gradient(135deg,#377cff,#6c48ef);display:grid;place-items:center;font-size:27px}.filename{font-weight:700;font-size:16px;overflow-wrap:anywhere}.success{color:var(--teal);font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.metric{border:1px solid var(--border);border-left:3px solid var(--blue);padding:15px;border-radius:9px}.metric:nth-child(2){border-left-color:var(--teal)}.metric:nth-child(3){border-left-color:var(--purple)}.metric label{display:block;color:#b9cbe5;font-weight:600;font-size:13px}.value{font-size:25px;font-weight:750;margin-top:6px}.sub{font-size:12px;color:var(--muted)}
+h3{font-size:18px;margin:0 0 4px}.sectionintro{color:var(--muted);font-size:13px;margin:0 0 18px}
+.timeline{display:flex;gap:5px;overflow-x:auto;padding:4px 0 12px;min-height:56px}.chord{flex:1 0 68px;max-width:180px;min-height:42px;border-radius:6px;border:1px solid #ffffff20;color:#fff;font-weight:750;cursor:pointer;padding:8px 10px;text-align:center}.chord.active{outline:2px solid white;outline-offset:2px}.timeaxis{height:26px;border-top:1px solid #344968;position:relative;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;padding-top:7px}
+audio{width:100%;margin-top:14px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px 5px;border-bottom:1px solid #263a56;white-space:nowrap}th{color:var(--muted);font-weight:600}.muted{color:var(--muted)}.notice{font-size:12px;color:var(--muted);margin:14px 0 0}.error{color:#ff9eaa}.hidden{display:none!important}
+@media(max-width:850px){main{grid-template-columns:1fr}.drop{min-height:250px}}@media(max-width:500px){header{padding:0 16px}.hint{display:none}main{padding:0 12px;margin:14px auto}.panel{padding:15px}.metrics{grid-template-columns:1fr}.metric{display:flex;align-items:center;justify-content:space-between;gap:10px}.value{font-size:20px;margin:0}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span>♫</span> SongAnalyzer</div><div class="hint">Upload a song. Get tempo, key, and chords.</div></header>
+<main>
+<section class="panel">
+<div id="drop" class="drop"><div class="cloud">⇧</div><h2>Upload an audio file</h2><p>Drag and drop here, or choose a file.</p><input id="file" type="file" accept=".mp3,.wav,.m4a,.ogg,.flac,audio/*" hidden><button id="choose">Choose audio file</button><div class="small">MP3, WAV, M4A, OGG, FLAC · Max 40 MB · First 10 minutes analyzed</div></div>
+<div id="status" class="status">Your audio is analyzed by the server and is not saved as a library.</div>
+</section>
+<section class="right">
+<div class="panel">
+<div class="filehead"><div class="musicicon">♫</div><div><div id="filename" class="filename">Your track</div><div id="complete" class="success">Waiting for an audio file</div></div></div>
+<div class="metrics"><div class="metric"><label>Tempo</label><div><div class="value" id="tempo">— <span style="font-size:13px">BPM</span></div><div class="sub">Estimated pulse</div></div></div><div class="metric"><label>Musical key</label><div><div class="value" id="key">—</div><div class="sub" id="keyconf">Audio-derived estimate</div></div></div><div class="metric"><label>Duration</label><div><div class="value" id="duration">—</div><div class="sub">Analyzed audio</div></div></div></div>
+<audio id="player" controls class="hidden"></audio>
+</div>
+<div class="panel"><h3>Chord timeline</h3><p class="sectionintro">Select a chord to jump to its position in the track.</p><div id="timeline" class="timeline muted">Upload a track to see estimated chords.</div><div id="axis" class="timeaxis"><span>0:00</span><span>Timeline</span><span>—</span></div><p id="note" class="notice">Chord labels are estimates and may be less reliable on dense mixes.</p></div>
+<div class="panel"><h3>Chord details</h3><p class="sectionintro">Estimated chord changes with timestamps and model-match scores.</p><div class="tablewrap"><table><thead><tr><th>Start</th><th>End</th><th>Chord</th><th>Match score</th></tr></thead><tbody id="rows"><tr><td colspan="4" class="muted">No analysis yet.</td></tr></tbody></table></div></div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let result=null, objectUrl=null;
+const fmt=t=>{t=Math.max(0,Math.floor(t||0));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`};
+$('choose').onclick=()=>$('file').click();
+$('file').onchange=()=>{if($('file').files[0])analyze($('file').files[0])};
+const drop=$('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)analyze(f)});
+async function analyze(file){
+ if(file.size>40*1024*1024){$('status').textContent='File is larger than 40 MB.';$('status').className='status error';return}
+ $('status').textContent='Analyzing audio… This may take a little while for longer tracks.';$('status').className='status';
+ $('complete').textContent='Analysis in progress';$('choose').disabled=true;
+ try{
+  const fd=new FormData();fd.append('file',file);
+  const res=await fetch('/analyze',{method:'POST',body:fd});const data=await res.json();
+  if(!res.ok)throw new Error(data.detail||'Analysis failed');
+  result=data;
+  if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=URL.createObjectURL(file);
+  $('player').src=objectUrl;$('player').classList.remove('hidden');
+  $('filename').textContent=data.filename;$('complete').textContent='✓ Analysis complete';
+  $('tempo').innerHTML=`${data.tempo_bpm||'—'} <span style="font-size:13px">BPM</span>`;
+  $('key').textContent=data.key;$('keyconf').textContent=`Heuristic confidence: ${Math.round(data.key_confidence*100)}%`;
+  $('duration').textContent=fmt(data.duration);
+  renderChords(data.chords||[],data.duration);
+  $('note').textContent=data.note||'Estimates may vary depending on audio quality.';
+  $('status').textContent='Done. Results were computed from the uploaded audio.';
+ }catch(err){$('status').textContent=err.message;$('status').className='status error';$('complete').textContent='Analysis failed'}
+ finally{$('choose').disabled=false}
+}
+function renderChords(chords,duration){
+ const timeline=$('timeline'),rows=$('rows');timeline.innerHTML='';rows.innerHTML='';
+ if(!chords.length){timeline.textContent='No chords detected';rows.innerHTML='<tr><td colspan="4">No chord estimates returned.</td></tr>';return}
+ const colors=['#377cf6','#22b88e','#f59e35','#e84d65','#8b6df0','#0ea5c9'];
+ chords.forEach((c,i)=>{
+  const b=document.createElement('button');b.className='chord';b.textContent=c.chord;b.style.background=colors[i%colors.length];b.title=`${fmt(c.start)}–${fmt(c.end)} · match ${Math.round(c.confidence*100)}%`;
+  b.style.flexGrow=Math.max(.5,c.end-c.start);b.onclick=()=>{document.querySelectorAll('.chord').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('player').currentTime=c.start;$('player').play().catch(()=>{})};timeline.appendChild(b);
+  const tr=document.createElement('tr');[fmt(c.start),fmt(c.end),c.chord,`${Math.round(c.confidence*100)}%`].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td)});rows.appendChild(tr);
+ });
+ $('axis').innerHTML=`<span>0:00</span><span>${fmt(duration/2)}</span><span>${fmt(duration)}</span>`;
+}
+</script>
+</body></html>
