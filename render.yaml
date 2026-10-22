@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: song-analyzer
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
